@@ -1,0 +1,45 @@
+services:
+  api:
+    build:
+      context: api
+      target: development
+    environment:
+      - RUST_LOG=debug
+      - PG_DBNAME=postgres
+      - PG_HOST=db
+      - PG_USER=postgres
+      - PG_PASSWORD=mysecretpassword
+      - APP_URL=http://localhost:3000
+      - AUTH0_URL=https://dev-ucckrvc3vw0hih5z.eu.auth0.com
+      - AUTH0_AUDIENCE=https://api.divvy.com
+      - CLIENT_ID=VKzR9MiyZIqtborwmwollcoLoCIjsZ9H
+      - CLIENT_SECRET=cerHdzkoWn--47VLDB0EqyaoBZOs09wFqU1LoYpDS8wk5kGBDTzQ7RS5cxmYLo5t
+    networks:
+      - client-side
+      - server-side
+    ports:
+      - 3000:3000
+    volumes:
+      - ./api:/usr/src/app
+    depends_on:
+      - db
+    command: npm run start:dev
+
+  db:
+    image: postgres:12-alpine
+    command: postgres -c 'max_connections=200'
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=mysecretpassword
+    networks:
+      - server-side
+    ports:
+      - 5432:5432
+
+networks:
+  client-side: {}
+  server-side: {}
+
+volumes:
+  backend-cache: {}
+  db-data: {}
