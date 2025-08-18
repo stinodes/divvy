@@ -106,6 +106,10 @@ func (b *Bill) GetParticipant(id string) *Participant {
 	return b.Participants[index]
 }
 
+func (b *Bill) SetParticipantAmount(id string, amount float64) error {
+
+}
+
 func (b *Bill) AddParticipant(participant *Participant) error {
 	b.Participants = append(b.Participants, participant)
 	if b.DivisionType == DivisionTypeShare {
