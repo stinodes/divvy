@@ -1,0 +1,3 @@
+# vim: set filetype=yaml.openapi :
+components:
+  schemas:

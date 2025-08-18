@@ -1,45 +1,38 @@
 services:
-  api:
-    build:
-      context: api
-      target: development
-    environment:
-      - RUST_LOG=debug
-      - PG_DBNAME=postgres
-      - PG_HOST=db
-      - PG_USER=postgres
-      - PG_PASSWORD=mysecretpassword
-      - APP_URL=http://localhost:3000
-      - AUTH0_URL=https://dev-ucckrvc3vw0hih5z.eu.auth0.com
-      - AUTH0_AUDIENCE=https://api.divvy.com
-      - CLIENT_ID=VKzR9MiyZIqtborwmwollcoLoCIjsZ9H
-      - CLIENT_SECRET=cerHdzkoWn--47VLDB0EqyaoBZOs09wFqU1LoYpDS8wk5kGBDTzQ7RS5cxmYLo5t
-    networks:
-      - client-side
-      - server-side
+  bill-db:
+    image: postgres:alpine
     ports:
-      - 3000:3000
+      - ${POSTGRES_PORT}:5432
+    hostname: bill-db
+    env_file: .env
     volumes:
-      - ./api:/usr/src/app
-    depends_on:
-      - db
-    command: npm run start:dev
-
-  db:
-    image: postgres:12-alpine
-    command: postgres -c 'max_connections=200'
-    restart: always
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $POSTGRES_DB -U $POSTGRES_USER"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     environment:
-      - POSTGRES_PASSWORD=mysecretpassword
-    networks:
-      - server-side
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  bill-api:
+    build:
+      context: ./bill-api/
     ports:
-      - 5432:5432
-
-networks:
-  client-side: {}
-  server-side: {}
-
+      - 8080:8080
+      - 1323:1323
+    hostname: api
+    env_file: .env
+    volumes:
+      - ./bill-api/:/usr/app
+    depends_on:
+      bill-db:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 volumes:
-  backend-cache: {}
-  db-data: {}
+  pgdata:
+    driver: local
