@@ -1,7 +1,7 @@
 # vim: set filetype=yaml.openapi :
 components:
   schemas:
-    BillResponse:
+    BillsResponse:
       type: object
       properties:
         id:
@@ -14,9 +14,56 @@ components:
         total:
           type: number
           format: float
-        created_at:
+
+    BillDetailResponse:
+      type: object
+      properties:
+        id:
           type: string
-          format: date-time
-        updated_at:
+          format: uuid
+        name:
           type: string
-          format: date-time
+        description:
+          type: string
+        total:
+          type: number
+          format: float
+        participants:
+          type: array
+          items:
+            $ref: "#/components/schemas/BillParticipantResponse"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BillItemResponse"
+    BillParticipantResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        amount:
+          type: number
+          format: float
+        shares:
+          type: integer
+          format: int
+        total:
+          type: number
+          format: float
+    BillItemResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        quantity:
+          type: integer
+          format: int
+        price:
+          type: number
+          format: float
