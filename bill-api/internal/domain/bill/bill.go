@@ -1,52 +1,37 @@
 package bill
 
 import (
-	"math"
 	"slices"
 
 	"github.com/google/uuid"
 	internalerrors "github.com/stinodes/bill-api/internal/errors"
 )
 
-type DivisionType string
-
-const (
-	DivisionTypeFlat  DivisionType = "flat"
-	DivisionTypeShare DivisionType = "share"
-)
-
 type Bill struct {
-	ID           string
-	Name         string
-	DivisionType DivisionType
+	ID   string
+	Name string
 
 	Items        []*Item
 	Participants []*Participant
 }
 
-func NewBill(name string, divisionType *DivisionType) (*Bill, error) {
+func NewBill(name string) (*Bill, error) {
 	if name == "" {
 		return nil, internalerrors.ErrBadInput
-	}
-	divType := DivisionTypeShare
-	if divisionType != nil {
-		divType = *divisionType
 	}
 
 	return &Bill{
 		ID:           uuid.NewString(),
 		Name:         name,
-		DivisionType: divType,
 		Items:        []*Item{},
 		Participants: []*Participant{},
 	}, nil
 }
 
-func BillFromDB(id string, name string, divisionType DivisionType, items []*Item, participants []*Participant) *Bill {
+func BillFromDB(id string, name string, items []*Item, participants []*Participant) *Bill {
 	return &Bill{
 		ID:           id,
 		Name:         name,
-		DivisionType: divisionType,
 		Items:        items,
 		Participants: participants,
 	}
@@ -60,30 +45,33 @@ func (b *Bill) GetTotal() float64 {
 	return total
 }
 
-func (b *Bill) GetTotalShares() int {
-	if b.DivisionType != DivisionTypeShare {
-		return 0
-	}
-	total := 0
+func (b *Bill) GetFlatTotal() float64 {
+	total := 0.0
 	for _, participant := range b.Participants {
-		total += int(math.Floor(participant.Amount))
+		total += participant.Amount
 	}
 	return total
 }
 
-func (b *Bill) GetMoneyForShare(id string) float64 {
-	totalMoney := b.GetTotal()
+func (b *Bill) GetTotalShares() int {
+	total := 0
+	for _, participant := range b.Participants {
+		total += participant.Shares
+	}
+	return total
+}
+
+func (b *Bill) GetMoneyPerShare() float64 {
+	totalShareMoney := b.GetTotal() - b.GetFlatTotal()
 	shares := b.GetTotalShares()
-	return totalMoney / float64(shares)
+	return totalShareMoney / float64(shares)
 }
 
 func (b *Bill) GetMoneyForParticipant(id string) float64 {
 	participant := b.GetParticipant(id)
-	if b.DivisionType == DivisionTypeFlat {
-		return participant.Amount
-	}
-	mPerShare := b.GetMoneyForShare(id)
-	return participant.Amount * mPerShare
+	mPerShare := b.GetMoneyPerShare()
+	shareAmount := float64(participant.Shares) * mPerShare
+	return participant.Amount + shareAmount
 }
 
 func (b *Bill) GetItem(id string) *Item {
@@ -106,15 +94,12 @@ func (b *Bill) GetParticipant(id string) *Participant {
 	return b.Participants[index]
 }
 
-func (b *Bill) SetParticipantAmount(id string, amount float64) error {
-
-}
-
 func (b *Bill) AddParticipant(participant *Participant) error {
-	b.Participants = append(b.Participants, participant)
-	if b.DivisionType == DivisionTypeShare {
-		participant.Amount = 1
+	if b.GetParticipant(participant.ID) != nil {
+		return internalerrors.ErrDuplicate
 	}
+	b.Participants = append(b.Participants, participant)
+
 	return nil
 }
 
@@ -128,7 +113,20 @@ func (b *Bill) RemoveParticipant(id string) error {
 	return internalerrors.ErrNotFound
 }
 
+func (b *Bill) EditParticipant(id string, amount float64, shares int) error {
+	participant := b.GetParticipant(id)
+	if participant == nil {
+		return internalerrors.ErrNotFound
+	}
+	err := participant.Edit(amount, shares)
+	return err
+
+}
+
 func (b *Bill) AddItem(item *Item) error {
+	if b.GetItem(item.ID) != nil {
+		return internalerrors.ErrDuplicate
+	}
 	b.Items = append(b.Items, item)
 	return nil
 }

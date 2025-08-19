@@ -6,10 +6,10 @@ import (
 )
 
 type Participant struct {
-	ID           string
-	Name         string
-	DivisionType *DivisionType
-	Amount       float64
+	ID     string
+	Name   string
+	Amount float64
+	Shares int
 }
 
 func NewParticipant(name string) (*Participant, error) {
@@ -18,28 +18,27 @@ func NewParticipant(name string) (*Participant, error) {
 	}
 
 	return &Participant{
-		ID:           uuid.NewString(),
-		Name:         name,
-		DivisionType: nil,
-		Amount:       0,
+		ID:     uuid.NewString(),
+		Name:   name,
+		Amount: 0,
+		Shares: 0,
 	}, nil
 }
 
-func ParticipantFromDB(id string, name string, divisionType *DivisionType, amount float64) *Participant {
+func ParticipantFromDB(id string, name string, amount float64, shares int) *Participant {
 	return &Participant{
-		ID:           id,
-		Name:         name,
-		DivisionType: divisionType,
-		Amount:       amount,
+		ID:     id,
+		Name:   name,
+		Amount: amount,
+		Shares: shares,
 	}
 }
 
-func (p *Participant) SetType(divisionType *DivisionType) error {
-	p.DivisionType = divisionType
-	return nil
-}
-
-func (p *Participant) SetAmount(amount float64) error {
+func (p *Participant) Edit(amount float64, shares int) error {
+	if amount < 0 || shares < 0 {
+		return internalerrors.ErrBadInput
+	}
 	p.Amount = amount
+	p.Shares = shares
 	return nil
 }
